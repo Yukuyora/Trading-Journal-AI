@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Trading Journal</title>
+</head>
+<body>
+
+  <h1>Digital Trading Journal</h1>
+
+  <h3>New Trade</h3>
+
+  <form id="tradeForm">
+    <label>
+      Pair:
+      <input type="text" id="pair" placeholder="e.g. EURUSD">
+    </label>
+    <br><br>
+
+    <label>
+      Direction:
+      <select id="direction">
+        <option>Buy</option>
+        <option>Sell</option>
+      </select>
+    </label>
+    <br><br>
+<label>
+  Strategy Used:
+  <input list="strategyOptions" id="strategy" placeholder="Select or type strategy">
+</label>
+
+<datalist id="strategyOptions"></datalist>
+
+    <br><br>
+
+    <label>
+      Reason for Entry:
+      <input type="text" id="reason" placeholder="e.g. London session high sweep">
+    </label>
+    <br><br>
+
+    <label>
+      Result:
+      <select id="result">
+        <option>Win</option>
+        <option>Loss</option>
+        <option>Break-even</option>
+      </select>
+    </label>
+    <br><br>
+
+   <label>
+  Emotion:
+  <input list="emotionOptions" id="emotion" placeholder="Select or type emotion">
+</label>
+
+<datalist id="emotionOptions"></datalist>
+
+    <br><br>
+
+    <button type="submit">Save Trade</button>
+  </form>
+
+  <p id="status"></p>
+
+  <h3>Saved Trades</h3>
+<ul id="tradeList"></ul>
+
+<h3>Monthly Review</h3>
+<button id="generateReport">Generate Monthly Report</button>
+
+<p id="monthlyMessage"></p>
+
+<h4>Strengths</h4>
+<ul id="monthlyStrengths"></ul>
+
+<h4>Weaknesses</h4>
+<ul id="monthlyWeaknesses"></ul>
+
+
+  <script>
+  function loadTrades() {
+    const trades = JSON.parse(localStorage.getItem("trades")) || [];
+    const list = document.getElementById("tradeList");
+    list.innerHTML = "";
+
+    trades.forEach(trade => {
+      const li = document.createElement("li");
+
+      li.innerText =
+        `${trade.date.slice(0,10)} | ${trade.pair} | ${trade.direction} | ` +
+        `${trade.strategy} | ${trade.result}`;
+
+      li.onclick = () => {
+        alert(
+          `PAIR: ${trade.pair}\n` +
+          `DIRECTION: ${trade.direction}\n` +
+          `STRATEGY: ${trade.strategy}\n` +
+          `REASON: ${trade.reason}\n` +
+          `RESULT: ${trade.result}\n` +
+          `EMOTION: ${trade.emotion}`
+        );
+      };
+
+      list.appendChild(li);
+    });
+  }
+
+  document.getElementById("tradeForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    const trade = {
+      pair: document.getElementById("pair").value,
+      direction: document.getElementById("direction").value,
+      strategy: document.getElementById("strategy").value,
+      reason: document.getElementById("reason").value,
+      result: document.getElementById("result").value,
+      emotion: document.getElementById("emotion").value,
+      date: new Date().toISOString()
+    };
+
+    const trades = JSON.parse(localStorage.getItem("trades")) || [];
+    trades.push(trade);
+    localStorage.setItem("trades", JSON.stringify(trades));
+
+    document.getElementById("status").innerText = "Trade saved.";
+    this.reset();
+    loadTrades();
+  });
+
+function loadStrategies() {
+  const trades = JSON.parse(localStorage.getItem("trades")) || [];
+  const strategies = [...new Set(trades.map(t => t.strategy).filter(Boolean))];
+
+  const datalist = document.getElementById("strategyOptions");
+  datalist.innerHTML = "";
+
+  strategies.forEach(strategy => {
+    const option = document.createElement("option");
+    option.value = strategy;
+    datalist.appendChild(option);
+  });
+}
+
+  loadTrades();
+  loadStrategies();
+  function loadEmotions() {
+  const trades = JSON.parse(localStorage.getItem("trades")) || [];
+
+  const emotionCount = {};
+  trades.forEach(t => {
+    if (t.emotion) {
+      emotionCount[t.emotion] = (emotionCount[t.emotion] || 0) + 1;
+    }
+  });
+
+  const sortedEmotions = Object.entries(emotionCount)
+    .sort((a, b) => b[1] - a[1])
+    .map(e => e[0]);
+
+  const datalist = document.getElementById("emotionOptions");
+  datalist.innerHTML = "";
+
+  sortedEmotions.forEach(emotion => {
+    const option = document.createElement("option");
+    option.value = emotion;
+    datalist.appendChild(option);
+  });
+}
+
+function loadEmotions() {
+  const trades = JSON.parse(localStorage.getItem("trades")) || [];
+
+  const emotionCount = {};
+  trades.forEach(t => {
+    if (t.emotion) {
+      emotionCount[t.emotion] = (emotionCount[t.emotion] || 0) + 1;
+    }
+  });
+
+  const sortedEmotions = Object.entries(emotionCount)
+    .sort((a, b) => b[1] - a[1])
+    .map(e => e[0]);
+
+  const datalist = document.getElementById("emotionOptions");
+  datalist.innerHTML = "";
+
+  sortedEmotions.forEach(emotion => {
+    const option = document.createElement("option");
+    option.value = emotion;
+    datalist.appendChild(option);
+  });
+}
+
+function generateMonthlyReport() {
+  const trades = JSON.parse(localStorage.getItem("trades")) || [];
+  if (trades.length === 0) return;
+
+  const now = new Date();
+  const month = now.getMonth();
+  const year = now.getFullYear();
+
+  const monthlyTrades = trades.filter(t => {
+    const d = new Date(t.date);
+    return d.getMonth() === month && d.getFullYear() === year;
+  });
+
+  const strengthsEl = document.getElementById("monthlyStrengths");
+  const weaknessesEl = document.getElementById("monthlyWeaknesses");
+  const messageEl = document.getElementById("monthlyMessage");
+
+  strengthsEl.innerHTML = "";
+  weaknessesEl.innerHTML = "";
+
+  const stats = {
+    win: 0,
+    loss: 0,
+    emotions: {},
+    strategies: {}
+  };
+
+  monthlyTrades.forEach(t => {
+    if (t.result === "Win") stats.win++;
+    if (t.result === "Loss") stats.loss++;
+
+    if (t.emotion) {
+      stats.emotions[t.emotion] = (stats.emotions[t.emotion] || 0) + 1;
+    }
+
+    if (t.strategy) {
+      stats.strategies[t.strategy] = (stats.strategies[t.strategy] || 0) + 1;
+    }
+  });
+
+  const topEmotion = Object.entries(stats.emotions)
+    .sort((a,b) => b[1]-a[1])[0];
+
+  const topStrategy = Object.entries(stats.strategies)
+    .sort((a,b) => b[1]-a[1])[0];
+
+  if (stats.win > stats.loss) {
+    strengthsEl.innerHTML += `<li>More winning trades than losing trades</li>`;
+  } else {
+    weaknessesEl.innerHTML += `<li>Losses exceed wins — discipline review required</li>`;
+  }
+
+  if (topStrategy) {
+    strengthsEl.innerHTML += `<li>${topStrategy[0]} performs best for you</li>`;
+  }
+
+  if (topEmotion && topEmotion[1] > monthlyTrades.length / 2) {
+    weaknessesEl.innerHTML += `<li>Emotion "${topEmotion[0]}" dominates your trading</li>`;
+  }
+
+  messageEl.innerText =
+    stats.loss > stats.win
+      ? "Mistakes are human. Repeating them is refusal to grow. Review your execution."
+      : "Good progress. Protect your discipline and refine your edge.";
+}
+
+document
+  .getElementById("generateReport")
+  .addEventListener("click", generateMonthlyReport);
+
+</script>
+
+  </script>
+
+</body>
+</html>
